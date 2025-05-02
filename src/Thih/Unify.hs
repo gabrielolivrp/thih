@@ -4,6 +4,14 @@ import Thih.Kind (HasKind (kind))
 import Thih.Subst (Subst, Types (tv), apply, emptySubst, merge, (+->), (@@))
 import Thih.Type (Type (..), Tyvar)
 
+{- | Compute the most general unifier (MGU) of two types.
+Returns a substitution that, when applied to both input types, makes them equal.
+This function recursively unifies type applications, variables, and constructors.
+Throws an error if the types cannot be unified.
+
+Example:
+  mgu (Maybe a) (Maybe Int)  ==>  [(a, Int)]
+-}
 mgu :: (Monad m) => Type -> Type -> m Subst
 mgu (TAp funct argum) (TAp funct' argum') = do
   s1 <- mgu funct funct'
@@ -15,6 +23,18 @@ mgu (TCon c) (TCon c')
   | c == c' = pure emptySubst
 mgu _ _ = error "Types do not unify"
 
+{- | Bind a type variable to a type, ensuring that:
+  - It does not occur within the type (occurs check).
+  - The kinds of the variable and type match.
+If valid, returns a substitution that maps the variable to the type.
+Throws an error otherwise.
+
+Example:
+  varBind a Int  ==>  [(a, Int)]
+  varBind a a    ==>  [] (no-op)
+  varBind a (Maybe a) ==> error (occurs check fails)
+  varBind a (Int -> Bool) ==> error (kind mismatch)
+-}
 varBind :: (Monad m) => Tyvar -> Type -> m Subst
 varBind u t
   | t == TVar u = pure emptySubst
@@ -22,6 +42,15 @@ varBind u t
   | kind u /= kind t = error "Kind mismatch"
   | otherwise = pure (u +-> t)
 
+{- | Attempt to match one type to another.
+This is like unification, but more restricted:
+it allows variables only in the first type to be substituted.
+Useful for type pattern matching rather than inference.
+
+Example:
+  match (Maybe a) (Maybe Int)  ==>  [(a, Int)]
+  match (a -> a) (Int -> Bool) ==> error (mismatch)
+-}
 match :: (Monad m) => Type -> Type -> m Subst
 match (TAp funct argum) (TAp funct' argum') = do
   s1 <- match funct funct'

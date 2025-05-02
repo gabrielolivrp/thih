@@ -5,23 +5,34 @@ module Thih.Type where
 import Thih.Id
 import Thih.Kind
 
+{- | A type variable, represented by an identifier and its kind.
+Example: a :: *
+-}
 data Tyvar = Tyvar Id Kind
   deriving (Eq)
 
 instance Show Tyvar where
   show (Tyvar tvar k) = show tvar <> " :: " <> show k
 
+{- | A type constructor, which produces types given arguments, represented by its name and kind.
+Example: Maybe :: * -> *, (->) :: * -> * -> *
+-}
 data Tycon = Tycon Id Kind
   deriving (Eq)
 
 instance Show Tycon where
   show (Tycon tcon k) = show tcon <> " :: " <> show k
 
+-- | The core 'Type' data type, representing type expressions.
 data Type
-  = TVar Tyvar
-  | TCon Tycon
-  | TAp Type Type
-  | TGen Int
+  = -- | A type variable, such as a, b
+    TVar Tyvar
+  | -- | A type constructor, such as Int, Maybe
+    TCon Tycon
+  | -- | Type application. For example, TAp (TCon Maybe) (TVar a) represents Maybe a
+    TAp Type Type
+  | -- | A generalized type variable used in type schemes (e.g., t0, t1)
+    TGen Int
   deriving (Eq)
 
 instance Show Type where
@@ -39,14 +50,15 @@ instance HasKind Tycon where
 instance HasKind Type where
   kind (TVar v) = kind v
   kind (TCon c) = kind c
-  kind (TAp funct _) = case kind funct of
-    Kfun _ body -> body
-    _ -> error "Kind mismatch"
+  kind (TAp f _) = case kind f of
+    Kfun _ result -> result
+    _ -> error "Kind mismatch in type application"
   kind (TGen _) = Star
 
-infixr 4 `fn`
 fn :: Type -> Type -> Type
 fn t1 = TAp (TAp tArrow t1)
+
+infixr 4 `fn`
 
 list :: Type -> Type
 list = TAp tList
@@ -73,7 +85,7 @@ tDouble :: Type
 tDouble = TCon (Tycon "Double" Star)
 
 tList :: Type
-tList = TCon (Tycon "[]" (Kfun Star (Kfun Star Star)))
+tList = TCon (Tycon "[]" (Kfun Star Star))
 
 tArrow :: Type
 tArrow = TCon (Tycon "(->)" (Kfun Star (Kfun Star Star)))
