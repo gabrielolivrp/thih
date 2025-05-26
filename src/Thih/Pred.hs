@@ -1,7 +1,9 @@
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Thih.Pred where
 
+import Control.Monad (msum)
 import Thih.Id (Id)
 import Thih.Subst (Subst, Types (..))
 import Thih.Type (Type, tDouble, tInteger)
@@ -26,18 +28,19 @@ data Qual t = [Pred] :=> t
 instance (Show t) => Show (Qual t) where
   show (ps :=> t) = "(" <> unwords (map show ps) <> ") => " <> show t
 
+{- | An instance declaration is a qualified predicate.
+  For example: Eq a => Eq [a]
+-}
+type Inst = (Qual Pred)
+
 {- | A 'Class' consists of:
   - a list of superclasses (by name),
   - and a list of instance declarations for the class.
 -}
 type Class = ([Id], [Inst])
 
-{- | An instance declaration is a qualified predicate.
-  For example: Eq a => Eq [a]
--}
-type Inst = (Qual Pred)
-
 instance (Types t) => Types (Qual t) where
+  apply :: (Types t) => Subst -> Qual t -> Qual t
   apply s (ps :=> t) = apply s ps :=> apply s t
   tv (ps :=> t) = tv ps ++ tv t
 
@@ -143,6 +146,27 @@ lift :: (Type -> Type -> Maybe a) -> Pred -> Pred -> Maybe a
 lift m (IsIn i t) (IsIn i' t')
   | i == i' = m t t'
   | otherwise = Nothing
+
+-- | Get all predicates that are superclasses of a given predicate.
+bySuper :: ClassEnv -> Pred -> [Pred]
+bySuper ce p@(IsIn i t) =
+  p : concat [bySuper ce (IsIn i' t) | i' <- super ce i]
+
+-- | Get all instances of a predicate by its class.
+byInst :: ClassEnv -> Pred -> Maybe [Pred]
+byInst ce p@(IsIn i _) = msum [tryInst it | it <- insts ce i]
+ where
+  tryInst (ps :=> h) = do
+    u <- mguPred h p
+    pure (map (apply u) ps)
+
+-- | Check if a set of predicates entails a given predicate.
+entail :: ClassEnv -> [Pred] -> Pred -> Bool
+entail ce ps p =
+  any ((p `elem`) . bySuper ce) ps
+    || case byInst ce p of
+      Nothing -> False
+      Just qs -> all (entail ce ps) qs
 
 -- | Add a standard set of type classes.
 addPreludeClasses :: EnvTransformer
