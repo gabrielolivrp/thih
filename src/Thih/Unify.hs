@@ -49,7 +49,7 @@ Useful for type pattern matching rather than inference.
 
 Example:
   match (Maybe a) (Maybe Int)  ==>  [(a, Int)]
-  match (a -> a) (Int -> Bool) ==> error (mismatch)
+  match (a -> Int) (Int -> Bool) ==> error mismatch
 -}
 match :: (Monad m) => Type -> Type -> m Subst
 match (TAp funct argum) (TAp funct' argum') = do
