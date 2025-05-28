@@ -6,7 +6,7 @@ module Thih.Pred where
 import Control.Monad (msum)
 import Thih.Id (Id)
 import Thih.Subst (Subst, Types (..))
-import Thih.Type (Type, tDouble, tInteger)
+import Thih.Type (Type (TAp, TCon, TVar), tDouble, tInteger)
 import Thih.Unify (match, mgu)
 
 {- | A 'Pred' represents a type class constraint.
@@ -167,6 +167,50 @@ entail ce ps p =
     || case byInst ce p of
       Nothing -> False
       Just qs -> all (entail ce ps) qs
+
+-- | Check if a predicate is in head normal form (HNF).
+isHnf :: Pred -> Bool
+isHnf (IsIn _ t) = go t
+ where
+  go (TVar _) = True
+  go (TAp t' _) = go t'
+  go (TCon _) = False
+  go _ = False
+
+-- | Convert a list of predicates to head normal form (HNF).
+toHnfs :: (Monad m) => ClassEnv -> [Pred] -> m [Pred]
+toHnfs ce ps = do
+  pss <- mapM (toHnf ce) ps
+  pure $ concat pss
+
+-- | Convert a single predicate to head normal form (HNF).
+toHnf :: (Monad m) => ClassEnv -> Pred -> m [Pred]
+toHnf ce p
+  | isHnf p = pure [p]
+  | otherwise = case byInst ce p of
+      Nothing -> error $ "No instance for " <> show p
+      Just ps -> toHnfs ce ps
+
+-- | Simplify a list of predicates by removing redundant ones.
+simplify :: ClassEnv -> [Pred] -> [Pred]
+simplify ce = go []
+ where
+  go rs [] = rs
+  go rs (p : ps)
+    | entail ce (rs ++ ps) p = go rs ps
+    | otherwise = go (p : rs) ps
+
+{- | Normalize predicates to HNF and then simplify,
+  yielding the minimal constraint context
+-}
+reduce :: (Monad m) => ClassEnv -> [Pred] -> m [Pred]
+reduce ce ps = do
+  qs <- toHnfs ce ps
+  pure (simplify ce qs)
+
+-- | Checks whether `p` is already indirectly covered by the superclasses of some `q` in `ps`
+scEntail :: ClassEnv -> [Pred] -> Pred -> Bool
+scEntail ce ps p = any ((p `elem`) . bySuper ce) ps
 
 -- | Add a standard set of type classes.
 addPreludeClasses :: EnvTransformer
