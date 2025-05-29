@@ -68,6 +68,10 @@ library
       , Thih.Pred
       , Thih.Subst
       , Thih.Unify
+      , Thih.Scheme
+      , Thih.Assump
+      , Thih.TI
+      , Thih.Infer
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
