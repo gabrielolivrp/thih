@@ -58,7 +58,7 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  MyLib
+    exposed-modules:  Thih
 
     -- Modules included in this library but not exported.
     other-modules:
@@ -72,6 +72,9 @@ library
       , Thih.Assump
       , Thih.TI
       , Thih.Infer
+      , Thih.Lit
+      , Thih.Pat
+      , Thih.Expr
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

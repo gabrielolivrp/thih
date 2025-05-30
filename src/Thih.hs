@@ -1,0 +1,29 @@
+module Thih (
+  module Thih.Assump,
+  module Thih.Expr,
+  module Thih.Id,
+  module Thih.Infer,
+  module Thih.Kind,
+  module Thih.Lit,
+  module Thih.Pat,
+  module Thih.Pred,
+  module Thih.Scheme,
+  module Thih.Subst,
+  module Thih.TI,
+  module Thih.Type,
+  module Thih.Unify,
+) where
+
+import Thih.Assump
+import Thih.Expr
+import Thih.Id
+import Thih.Infer
+import Thih.Kind
+import Thih.Lit
+import Thih.Pat
+import Thih.Pred
+import Thih.Scheme
+import Thih.Subst
+import Thih.TI
+import Thih.Type
+import Thih.Unify
